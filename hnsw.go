@@ -1,6 +1,7 @@
 package hnsw
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"sync"
@@ -18,6 +19,7 @@ func (a Point) Size() int {
 type node struct {
 	sync.RWMutex
 	// locked  bool
+	text string
 	p       Point
 	level   int
 	friends [][]uint32
@@ -62,10 +64,10 @@ func (h *Hnsw) Grow(size int) {
 	h.nodes = newNodes
 }
 
-func (h *Hnsw) Add(q Point, id uint32) {
+func (h *Hnsw) Add(q Point, id uint32, textdata string) {
 	if id == 0 {
         if len(h.nodes) == 0 {
-            h.nodes = append(h.nodes, node{level: 0, p: q})
+            h.nodes = append(h.nodes, node{level: 0, p: q, text: ""})
             h.enterpoint = 0
         }
         return
@@ -83,7 +85,7 @@ func (h *Hnsw) Add(q Point, id uint32) {
 
 	// assume Grow has been called in advance
 	newID := id
-	newNode := node{p: q, level: curlevel, friends: make([][]uint32, min(curlevel, currentMaxLayer)+1)}
+	newNode := node{p: q, level: curlevel, friends: make([][]uint32, min(curlevel, currentMaxLayer)+1),text: textdata}
 
 	// first pass, find another ep if curlevel < maxLayer
 	for level := currentMaxLayer; level > curlevel; level-- {
@@ -337,7 +339,7 @@ func (h *Hnsw) searchAtLayer(q Point, resultSet *distqueue.DistQueueClosestLast,
 	}
 }
 
-func (h *Hnsw) Search(q Point, ef int, K int) *distqueue.DistQueueClosestLast {
+func (h *Hnsw) Search(q Point, ef int, K int) []string {
 
 	h.RLock()
 	currentMaxLayer := h.maxLayer
@@ -364,7 +366,15 @@ func (h *Hnsw) Search(q Point, ef int, K int) *distqueue.DistQueueClosestLast {
 	for resultSet.Len() > K {
 		resultSet.Pop()
 	}
-	return resultSet
+	var textData []string
+	results := resultSet.Items()
+	for _, item := range results {
+		nodeID := item.ID
+		nodeText := h.nodes[nodeID].text
+		textData = append(textData, nodeText)
+		fmt.Printf("Node ID: %d, Text: %s\n", nodeID, nodeText)
+	}
+	return textData
 }
 
 func min(a, b int) int {

@@ -14,12 +14,11 @@ func main() {
 		K              = 10
 	)
 
-	// var zero hnsw.Point = make([]float32, 128)
-
 	h := hnsw.New(M, efConstruction)
 
 	for i := 0; i < 1000; i++ {
-		h.Add(randomPoint(), uint32(i))
+		strValue := fmt.Sprintf("%d", i)
+		h.Add(randomPoint(), uint32(i), strValue)
 	}
 
 	query := randomPoint()
@@ -27,9 +26,8 @@ func main() {
 	fmt.Printf("Now searching with HNSW...\n")
 	result := h.Search(query, efSearch, K)
 
-	results := result.Items()
-	for i := range results{
-		println(results[i].ID)
+	for _,i := range result{
+		println(i)
 	}
 
 
