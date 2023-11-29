@@ -13,7 +13,7 @@ type DistQueueClosestFirst struct {
 
 func (pq *DistQueueClosestFirst) Init() *DistQueueClosestFirst {
 	pq.items = make([]*Item, 1, pq.Size+1)
-	pq.items[0] = nil 
+	pq.items[0] = nil
 	pq.initiated = true
 	return pq
 }
@@ -24,7 +24,6 @@ func (pq *DistQueueClosestFirst) Reset() {
 func (pq *DistQueueClosestFirst) Items() []*Item {
 	return pq.items[1:]
 }
-
 
 func (pq *DistQueueClosestFirst) Push(id uint32, d float32) *Item {
 	if !pq.initiated {
@@ -62,13 +61,9 @@ func (pq *DistQueueClosestFirst) Top() (uint32, float32) {
 	return pq.items[1].ID, pq.items[1].D
 }
 
-
-
 func (pq *DistQueueClosestFirst) Len() int {
 	return len(pq.items) - 1
 }
-
-
 
 func (pq *DistQueueClosestFirst) swim(k int) {
 	for k > 1 && (pq.items[k/2].D > pq.items[k].D) {
@@ -107,7 +102,6 @@ func (pq *DistQueueClosestLast) Init() *DistQueueClosestLast {
 func (pq *DistQueueClosestLast) Items() []*Item {
 	return pq.items[1:]
 }
-
 
 func (pq *DistQueueClosestLast) Push(id uint32, d float32) *Item {
 	if !pq.initiated {
@@ -155,12 +149,9 @@ func (pq *DistQueueClosestLast) Top() (uint32, float32) {
 	return pq.items[1].ID, pq.items[1].D
 }
 
-
-
 func (pq *DistQueueClosestLast) Len() int {
 	return len(pq.items) - 1
 }
-
 
 func (pq *DistQueueClosestLast) swim(k int) {
 	for k > 1 && (pq.items[k/2].D < pq.items[k].D) {

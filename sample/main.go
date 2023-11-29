@@ -1,8 +1,9 @@
 package main
+
 import (
 	"fmt"
+	"github.com/AnishAdkikar/og"
 	"math/rand"
-	"github.com/casibase/go-hnsw"
 )
 
 func main() {
@@ -26,11 +27,9 @@ func main() {
 	fmt.Printf("Now searching with HNSW...\n")
 	result := h.Search(query, efSearch, K)
 
-	for _,i := range result{
+	for _, i := range result {
 		println(i)
 	}
-
-
 
 }
 

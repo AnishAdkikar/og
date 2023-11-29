@@ -1,3 +1,3 @@
-module github.com/casibase/go-hnsw
+module github.com/AnishAdkikar/og
 
 go 1.19
