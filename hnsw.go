@@ -56,13 +56,17 @@ func (h *Hnsw) Grow(size int) {
 }
 
 func (h *Hnsw) Add(q Point, id uint32, textdata string) {
-	if id == 0 {
+	// if id == 0 {
 		if len(h.nodes) == 0 {
 			h.nodes = append(h.nodes, node{level: 0, p: q, text: ""})
 			h.enterpoint = 0
 		}
-		return
-	}
+		// return
+	// }
+	if int(id) < 0 {
+        fmt.Printf("Warning: Attempt to add a node with negative ID (%d). Skipping.", id)
+        return
+    }
 	if int(id)+1 > len(h.nodes) {
 		newSize := max(int(id)+1, len(h.nodes)*2)
 		h.Grow(newSize)
@@ -283,7 +287,7 @@ func (h *Hnsw) searchAtLayer(q Point, resultSet *distqueue.DistQueueClosestLast,
 	}
 }
 
-func (h *Hnsw) Search(q Point, ef int, K int) []string {
+func (h *Hnsw) Search(q Point, ef int, K int) []uint32 {
 
 	h.RLock()
 	currentMaxLayer := h.maxLayer
@@ -309,12 +313,14 @@ func (h *Hnsw) Search(q Point, ef int, K int) []string {
 	for resultSet.Len() > K {
 		resultSet.Pop()
 	}
-	var textData []string
+	// var textData []string
+	var textData []uint32
 	results := resultSet.Items()
 	for _, item := range results {
 		nodeID := item.ID
 		nodeText := h.nodes[nodeID].text
-		textData = append(textData, nodeText)
+		// textData = append(textData, nodeText)
+		textData = append(textData, nodeID)
 		fmt.Printf("Node ID: %d, Text: %s\n", nodeID, nodeText)
 	}
 	return textData
