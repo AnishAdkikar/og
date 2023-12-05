@@ -1,2 +1,2 @@
-12.10 09.00 120-80 tired good working good, busy
-13.10 19.00 120-80 tired bad tired working tired
+12.10 09.00 120-80 good good nice good working
+13.10 19.00 120-80 bad bad tired tiered working

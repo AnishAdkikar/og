@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -23,20 +24,19 @@ func main() {
 	}
 	fmt.Println("Python file execution complete")
 	const (
-		M              = 32
-		efConstruction = 400
-		efSearch       = 100
-		K              = 2
+		M              = 3
+		efConstruction = 4
+		efSearch       = 2
+		K              = 1
 	)
 
 	h := hnsw.New(M, efConstruction)
-
-	if err := readEmbeddingsFile(outputEmbeddingsFile, h.Add); err != nil {
+	if err := readEmbeddingsFiles(outputEmbeddingsFile, "../scripts/text_data.txt", h.Add); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("hnsw addition execution complete")
 
-	cmd := exec.Command("python", "../scripts/search.py", "good ")
+	cmd := exec.Command("python", "../scripts/search.py", "tiered bad working tired")
 	output, err := cmd.Output()
 	if err != nil {
 		log.Fatal(err)
@@ -45,27 +45,18 @@ func main() {
 	if err := json.Unmarshal(output, &resultArray); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(resultArray)
 	query := resultArray
 	fmt.Printf("Now searching with HNSW...\n")
 	result := h.Search(query, efSearch, K)
 	fmt.Println(result)
-
-	// Print data from the text file based on line numbers
-	if err := printLinesByNumbers("../scripts/text_data.txt", result); err != nil {
-		log.Fatal(err)
-	}
-	
 }
 
 func runPythonScript(pythonScript, inputCSVFile, outputEmbeddingsFile string) error {
 	cmd := exec.Command("python", pythonScript, inputCSVFile, outputEmbeddingsFile)
 
-	// Redirect standard output and standard error to Go's standard output and error
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	// Run the command
 	err := cmd.Run()
 	if err != nil {
 		return err
@@ -73,24 +64,28 @@ func runPythonScript(pythonScript, inputCSVFile, outputEmbeddingsFile string) er
 
 	return nil
 }
-
-func readEmbeddingsFile(filePath string, addFunc func(hnsw.Point, uint32, string)) error {
-	file, err := os.Open(filePath)
+func readEmbeddingsFiles(dataFilePath string, stringFilePath string, addFunc func(hnsw.Point, uint32, string)) error {
+	dataFile, err := os.Open(dataFilePath)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer dataFile.Close()
 
-	scanner := bufio.NewScanner(file)
-	lineNumber := 1 // Start line numbering from 1
-	for scanner.Scan() {
-		line := scanner.Text()
-		// Split the line into space-separated values
-		values := strings.Fields(line)
+	stringFile, err := os.Open(stringFilePath)
+	if err != nil {
+		return err
+	}
+	defer stringFile.Close()
 
-		// Extract values and convert to appropriate types
+	scannerData := bufio.NewScanner(dataFile)
+	scannerString := bufio.NewScanner(stringFile)
+
+	lineNumber := 1 
+	for scannerData.Scan() {
+		dataLine := scannerData.Text()
+		dataValues := strings.Fields(dataLine)
 		var data []float32
-		for _, valStr := range values {
+		for _, valStr := range dataValues {
 			val, err := strconv.ParseFloat(valStr, 32)
 			if err != nil {
 				return err
@@ -99,17 +94,22 @@ func readEmbeddingsFile(filePath string, addFunc func(hnsw.Point, uint32, string
 		}
 		point := hnsw.Point(data)
 
-		// Assuming the value is a string (adjust as needed)
-		stringValue := "example" // Replace with the actual string value
+		if scannerString.Scan() {
+			stringValue := scannerString.Text()
 
-		// Call the hnsw.Add function with the extracted values and line number
-		addFunc(point, uint32(lineNumber), stringValue)
+			addFunc(point, uint32(lineNumber), stringValue)
 
-		// Increment line number for the next iteration
-		lineNumber++
+			lineNumber++
+		} else {
+			return errors.New("second file has fewer lines than the first file")
+		}
 	}
 
-	if err := scanner.Err(); err != nil {
+	if err := scannerData.Err(); err != nil {
+		return err
+	}
+
+	if err := scannerString.Err(); err != nil {
 		return err
 	}
 
@@ -117,37 +117,3 @@ func readEmbeddingsFile(filePath string, addFunc func(hnsw.Point, uint32, string
 }
 
 
-func printLinesByNumbers(filePath string, lineNumbers []uint32) error {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	currentLineNumber := 1
-
-	for scanner.Scan() {
-		if contains(lineNumbers, currentLineNumber) {
-			line := scanner.Text()
-			fmt.Printf("%s\n", line)
-		}
-
-		currentLineNumber++
-	}
-
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func contains(arr []uint32, num int) bool {
-	for _, v := range arr {
-		if v == uint32(num) {
-			return true
-		}
-	}
-	return false
-}

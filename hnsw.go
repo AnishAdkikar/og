@@ -287,7 +287,7 @@ func (h *Hnsw) searchAtLayer(q Point, resultSet *distqueue.DistQueueClosestLast,
 	}
 }
 
-func (h *Hnsw) Search(q Point, ef int, K int) []uint32 {
+func (h *Hnsw) Search(q Point, ef int, K int) []string {
 
 	h.RLock()
 	currentMaxLayer := h.maxLayer
@@ -313,15 +313,15 @@ func (h *Hnsw) Search(q Point, ef int, K int) []uint32 {
 	for resultSet.Len() > K {
 		resultSet.Pop()
 	}
-	// var textData []string
-	var textData []uint32
+	var textData []string
+	// var textData []uint32
 	results := resultSet.Items()
 	for _, item := range results {
 		nodeID := item.ID
 		nodeText := h.nodes[nodeID].text
-		// textData = append(textData, nodeText)
-		textData = append(textData, nodeID)
-		fmt.Printf("Node ID: %d, Text: %s\n", nodeID, nodeText)
+		textData = append(textData, nodeText)
+		// textData = append(textData, nodeID)
+		// fmt.Printf("Node ID: %d, Text: %s\n", nodeID, nodeText)
 	}
 	return textData
 }

@@ -11,10 +11,10 @@ def load_dataset(file_path):
         'Date': ['12.10', '13.10'],
         'Time': ['09.00', '19.00'],
         'Pressure': ['120-80', '120-80'],
-        'State by voice': ['tired', 'tired'],
+        'State by voice': ['good', 'bad'],
         'Quality of sleep': ['good', 'bad'],
-        'State by video': ['working', 'tired'],
-        'Final state': ['good, busy', 'working tired']
+        'State by video': ['nice', 'tired'],
+        'Final state': ['good working', 'tiered working']
     })
     return df
 
