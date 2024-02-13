@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"sync"
-
+	// "sync"
+	"github.com/dustinxie/lockfree"
 	hnsw "github.com/AnishAdkikar/og"
 )
 
 var (
-	userHnswMap = make(map[string]*hnsw.Hnsw)
-	mu          sync.Mutex
+	// userHnswMap = make(map[string]*hnsw.Hnsw)
+	userHnswMap = lockfree.NewHashMap()
+	// mu          sync.Mutex
 )
 
-func handleNewConnection(w http.ResponseWriter, r *http.Request) {
+func handleConnection(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Only POST requests are allowed", http.StatusMethodNotAllowed)
 		return
@@ -36,20 +37,28 @@ func handleNewConnection(w http.ResponseWriter, r *http.Request) {
 	M := requestData.M
 	efConstruction := requestData.EfConstruction
 	// fmt.Println(userID, M, efConstruction)
-	mu.Lock()
-	defer mu.Unlock()
+	// mu.Lock()
+	// defer mu.Unlock()
 
-	h, ok := userHnswMap[userID]
+	// h, ok := userHnswMap[userID]
+	// if !ok {
+	// 	fmt.Println("Creating new entry")
+	// 	M_int, _ := strconv.Atoi(M)
+	// 	efConstruction_int, _ := strconv.Atoi(efConstruction)
+	// 	h = hnsw.New(M_int, efConstruction_int)
+	// 	userHnswMap[userID] = h
+	// }
+	h,ok := userHnswMap.Get(userID)
 	if !ok {
 		fmt.Println("Creating new entry")
 		M_int, _ := strconv.Atoi(M)
 		efConstruction_int, _ := strconv.Atoi(efConstruction)
 		h = hnsw.New(M_int, efConstruction_int)
-		userHnswMap[userID] = h
+		userHnswMap.Set(userID,h)
 	}
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "Data received successfully")
+	fmt.Fprint(w, "Connection established successfully")
 }
 
 func handleAddData(w http.ResponseWriter, r *http.Request) {
@@ -71,18 +80,24 @@ func handleAddData(w http.ResponseWriter, r *http.Request) {
 
 	userID := requestData.UserID
 
-	mu.Lock()
-	defer mu.Unlock()
+	// mu.Lock()
+	// defer mu.Unlock()
+    hInterface, ok := userHnswMap.Get(userID)
+    if !ok {
+        http.Error(w, "HNSW instance not found for the user", http.StatusBadRequest)
+        return
+    }
 
-	h, ok := userHnswMap[userID]
+    h, ok := hInterface.(*hnsw.Hnsw)
 	if !ok {
 		http.Error(w, "HNSW instance not found for the user", http.StatusBadRequest)
 		return
 	}
+	
 
 	for text, vector := range requestData.Data {
 		h.Add(vector, uint32(h.Size), text)
-		fmt.Println(text,vector,h.Size)
+		fmt.Println(text, vector, h.Size)
 		h.Size++
 	}
 
@@ -112,10 +127,16 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 	userID := requestData.UserID
 	data := requestData.Data
 
-	mu.Lock()
-	defer mu.Unlock()
+	// mu.Lock()
+	// defer mu.Unlock()
 
-	h, ok := userHnswMap[userID]
+    hInterface, ok := userHnswMap.Get(userID)
+    if !ok {
+        http.Error(w, "HNSW instance not found for the user", http.StatusBadRequest)
+        return
+    }
+
+    h, ok := hInterface.(*hnsw.Hnsw)
 	if !ok {
 		http.Error(w, "HNSW instance not found for the user", http.StatusBadRequest)
 		return
@@ -135,7 +156,7 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 }
 func main() {
 
-	http.HandleFunc("/connection", handleNewConnection)
+	http.HandleFunc("/connection", handleConnection)
 	http.HandleFunc("/add-data", handleAddData)
 	http.HandleFunc("/search", handleSearch)
 	go func() {
