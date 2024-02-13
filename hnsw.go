@@ -2,11 +2,12 @@ package hnsw
 
 import (
 	"fmt"
-	"github.com/AnishAdkikar/og/distqueue"
-	"github.com/AnishAdkikar/og/f32"
 	"math"
 	"math/rand"
 	"sync"
+
+	"github.com/AnishAdkikar/og/distqueue"
+	"github.com/AnishAdkikar/og/f32"
 )
 
 type Point []float32
@@ -33,6 +34,7 @@ type Hnsw struct {
 	LevelMult      float64
 	maxLayer       int
 	enterpoint     uint32
+	Size           int
 }
 
 func New(M int, efConstruction int) *Hnsw {
@@ -43,6 +45,7 @@ func New(M int, efConstruction int) *Hnsw {
 	h.M0 = 2 * M
 	h.DistFunc = f32.L2Squared8AVX
 	h.nodes = []node{}
+	h.Size = 0
 	return &h
 }
 
@@ -57,16 +60,17 @@ func (h *Hnsw) Grow(size int) {
 
 func (h *Hnsw) Add(q Point, id uint32, textdata string) {
 	// if id == 0 {
-		if len(h.nodes) == 0 {
-			h.nodes = append(h.nodes, node{level: 0, p: q, text: ""})
-			h.enterpoint = 0
-		}
-		// return
+	if len(h.nodes) == 0 {
+		h.nodes = append(h.nodes, node{level: 0, p: q, text: ""})
+		h.enterpoint = 0
+		h.Size++
+	}
+	// return
 	// }
 	if int(id) < 0 {
-        fmt.Printf("Warning: Attempt to add a node with negative ID (%d). Skipping.", id)
-        return
-    }
+		fmt.Printf("Warning: Attempt to add a node with negative ID (%d). Skipping.", id)
+		return
+	}
 	if int(id)+1 > len(h.nodes) {
 		newSize := max(int(id)+1, len(h.nodes)*2)
 		h.Grow(newSize)
