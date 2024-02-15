@@ -15,13 +15,12 @@ query = "SELECT * FROM list_nodal_officer WHERE State='Karnataka'"
 
 # Execute query
 my_cursor.execute(query)
-
+result_string=''
 for row in my_cursor:
-    # Converting row to string from tuple
-    result = str(row)
-    # Removing brackets from the string
-    result = result.replace('(','').replace(')','')
-    print(result)
+    for i in row:
+        result_string=result_string+str(i)
+    print(result_string)
+    result_string=''
     
     
 
