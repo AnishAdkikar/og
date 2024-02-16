@@ -23,15 +23,32 @@ def index():
     # output=[row for row in cur.fetchall() ]
     # return jsonify(output)
 
-    # This returns in string format seperated by space
-    output=''
-    result=[]
+    
+    output = ""
+    result = {} # returns each row with its index
+    final_result={} # returns group of rows with 6 elements of result
+    index = 1
+
     for row in cur:
-        for i in row:    
-            output+=str(i)+" "
-        result.append(output)
-        output=""
-    return jsonify(result)
+        sub_result = []
+        for i in row:
+            output = output + str(i) + " "
+        sub_result.append(output)
+        output=''
+        
+        result[index] = sub_result
+        index += 1
+    
+    count=0
+    for i in range(1,(len(result)//6)+1):
+        sub_result=[]
+        while count<i*6:
+            sub_result.append(result[count+1])
+            count+=1
+            
+        final_result[i] = sub_result
+        
+    return jsonify(final_result)
 
 if __name__ == '__main__':
     app.run(debug=True)
