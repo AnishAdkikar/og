@@ -4,15 +4,69 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"sync"
 
-	hnsw "github.com/AnishAdkikar/og"
+	hnsw "github.com/AnishAdkikar/og/hnsw"
 	"github.com/dustinxie/lockfree"
 )
 
 var (
-	userHnswMap = lockfree.NewHashMap()
+	userHnswMap      = lockfree.NewHashMap()
+	persistenceMutex sync.Mutex
+	dataDir          = "user_data"
 )
+
+func getUserFilePath(userID string) string {
+	return filepath.Join(dataDir, userID+".json")
+}
+
+func saveHNSWToFile(userID string, h *hnsw.Hnsw) error {
+	// persistenceMutex.Lock()
+	// defer persistenceMutex.Unlock()
+
+	filePath := getUserFilePath(userID)
+
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Serialize and save HNSW to file
+	encoder := json.NewEncoder(file)
+	err = encoder.Encode(h)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func loadHNSWFromFile(userID string) (*hnsw.Hnsw, error) {
+	persistenceMutex.Lock()
+	defer persistenceMutex.Unlock()
+
+	filePath := getUserFilePath(userID)
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	// Deserialize HNSW from file
+	decoder := json.NewDecoder(file)
+	var h hnsw.Hnsw
+	err = decoder.Decode(&h)
+	if err != nil {
+		return nil, err
+	}
+
+	return &h, nil
+}
 
 func handleConnection(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -34,14 +88,28 @@ func handleConnection(w http.ResponseWriter, r *http.Request) {
 	userID := requestData.UserID
 	M := requestData.M
 	efConstruction := requestData.EfConstruction
-
 	h, ok := userHnswMap.Get(userID)
 	if !ok {
 		fmt.Println("Creating new entry")
 		M_int, _ := strconv.Atoi(M)
 		efConstruction_int, _ := strconv.Atoi(efConstruction)
-		h = hnsw.New(M_int, efConstruction_int)
+
+		// Check if there is a saved HNSW for the user and load it
+		h, err := loadHNSWFromFile(userID)
+		if err != nil {
+			// If not found, create a new HNSW
+			h = hnsw.New(M_int, efConstruction_int)
+		}
+
 		userHnswMap.Set(userID, h)
+	} else {
+		// If there's already an instance in the map, use it
+		existingH, ok := h.(*hnsw.Hnsw)
+		if !ok {
+			http.Error(w, "Invalid HNSW instance in the map", http.StatusInternalServerError)
+			return
+		}
+		h = existingH
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -84,7 +152,11 @@ func handleAddData(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(text, vector, h.Size)
 		h.Size++
 	}
-
+	err = saveHNSWToFile(userID, h)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error saving HNSW to file: %s", err), http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprint(w, "Data added successfully")
 }
@@ -135,6 +207,11 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func main() {
+	err := os.MkdirAll(dataDir, os.ModePerm)
+	if err != nil {
+		fmt.Println("Error creating data directory:", err)
+		return
+	}
 
 	http.HandleFunc("/connection", handleConnection)
 	http.HandleFunc("/add-data", handleAddData)
