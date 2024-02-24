@@ -99,6 +99,7 @@ func handleConnection(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			// If not found, create a new HNSW
 			h = hnsw.New(M_int, efConstruction_int)
+			fmt.Println("Created new entry")
 		}
 
 		userHnswMap.Set(userID, h)
@@ -110,6 +111,8 @@ func handleConnection(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h = existingH
+		fmt.Println("loaded existing entry")
+
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -126,8 +129,9 @@ func handleAddData(w http.ResponseWriter, r *http.Request) {
 		UserID string               `json:"userID"`
 		Data   map[string][]float32 `json:"data"`
 	}
-
+	
 	err := json.NewDecoder(r.Body).Decode(&requestData)
+	fmt.Println("Json data decoded")
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error decoding JSON data: %s", err), http.StatusBadRequest)
 		return
@@ -148,8 +152,9 @@ func handleAddData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for text, vector := range requestData.Data {
+	fmt.Println("data adding")
 		h.Add(vector, uint32(h.Size), text)
-		fmt.Println(text, vector, h.Size)
+		// fmt.Println(text, vector, h.Size)
 		h.Size++
 	}
 	err = saveHNSWToFile(userID, h)
