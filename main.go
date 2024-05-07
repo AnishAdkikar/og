@@ -26,7 +26,6 @@ func getUserFilePath(userID string) string {
 func saveHNSWToFile(userID string, h *hnsw.Hnsw) error {
 	// persistenceMutex.Lock()
 	// defer persistenceMutex.Unlock()
-
 	filePath := getUserFilePath(userID)
 
 	file, err := os.Create(filePath)
@@ -48,7 +47,6 @@ func saveHNSWToFile(userID string, h *hnsw.Hnsw) error {
 func loadHNSWFromFile(userID string) (*hnsw.Hnsw, error) {
 	persistenceMutex.Lock()
 	defer persistenceMutex.Unlock()
-
 	filePath := getUserFilePath(userID)
 
 	file, err := os.Open(filePath)
@@ -131,13 +129,15 @@ func handleAddData(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	err := json.NewDecoder(r.Body).Decode(&requestData)
-	fmt.Println("Json data decoded")
+	fmt.Println(err)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error decoding JSON data: %s", err), http.StatusBadRequest)
 		return
 	}
+	fmt.Println("Json data decoded")
 
 	userID := requestData.UserID
+
 
 	hInterface, ok := userHnswMap.Get(userID)
 	if !ok {
@@ -152,9 +152,8 @@ func handleAddData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for text, vector := range requestData.Data {
-	fmt.Println("data adding")
 		h.Add(vector, uint32(h.Size), text)
-		// fmt.Println(text, vector, h.Size)
+		fmt.Println(h.Size)
 		h.Size++
 	}
 	err = saveHNSWToFile(userID, h)
