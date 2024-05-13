@@ -1,9 +1,7 @@
-FROM golang
+FROM ubuntu
 
 WORKDIR /db
 
-COPY go.mod go.sum ./
-RUN go mod download
+COPY og /db/
 
-COPY * ./
-CMD ["go","run","main.go"]
+CMD ["./og"]

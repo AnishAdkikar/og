@@ -24,8 +24,8 @@ func getUserFilePath(userID string) string {
 }
 
 func saveHNSWToFile(userID string, h *hnsw.Hnsw) error {
-	// persistenceMutex.Lock()
-	// defer persistenceMutex.Unlock()
+	persistenceMutex.Lock()
+	defer persistenceMutex.Unlock()
 	filePath := getUserFilePath(userID)
 
 	file, err := os.Create(filePath)
@@ -88,7 +88,6 @@ func handleConnection(w http.ResponseWriter, r *http.Request) {
 	efConstruction := requestData.EfConstruction
 	h, ok := userHnswMap.Get(userID)
 	if !ok {
-		fmt.Println("Creating new entry")
 		M_int, _ := strconv.Atoi(M)
 		efConstruction_int, _ := strconv.Atoi(efConstruction)
 
@@ -110,7 +109,6 @@ func handleConnection(w http.ResponseWriter, r *http.Request) {
 		}
 		h = existingH
 		fmt.Println("loaded existing entry")
-
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -186,7 +184,6 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 
 	userID := requestData.UserID
 	data := requestData.Data
-
 	hInterface, ok := userHnswMap.Get(userID)
 	if !ok {
 		http.Error(w, "HNSW instance not found for the user", http.StatusBadRequest)
@@ -200,15 +197,14 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res := h.Search(data, requestData.Ef, requestData.K)
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-
-	err = json.NewEncoder(w).Encode(res)
+	jsonResponse, err := json.Marshal(map[string][]string{"res": res})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error encoding JSON response: %s", err), http.StatusInternalServerError)
 		return
 	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResponse)
 }
 func main() {
 	err := os.MkdirAll(dataDir, os.ModePerm)
